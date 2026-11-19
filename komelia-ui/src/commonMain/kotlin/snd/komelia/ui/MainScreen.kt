@@ -32,7 +32,11 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -69,9 +73,10 @@ import snd.komelia.ui.search.SearchScreen
 import snd.komelia.ui.series.seriesScreen
 import snd.komelia.ui.settings.MobileSettingsScreen
 import snd.komelia.ui.settings.SettingsScreen
+import snd.komelia.ui.dialogs.libraryedit.LibraryEditDialogs
 import snd.komelia.ui.topbar.AppBar
-import snd.komelia.ui.topbar.LibrariesNavBarContent
 import snd.komelia.ui.topbar.NavBarContent
+import snd.komga.client.library.KomgaLibrary
 
 class MainScreen(
     private val defaultScreen: Screen = HomeScreen()
@@ -162,56 +167,50 @@ class MainScreen(
         navigator: Navigator,
         vm: MainScreenViewModel
     ) {
-        val coroutineScope = rememberCoroutineScope()
+        val libraries = vm.libraries.collectAsState().value
+        var showLibraryAddDialog by remember { mutableStateOf(false) }
+        if (showLibraryAddDialog) {
+            LibraryEditDialogs(
+                library = null,
+                onDismissRequest = { showLibraryAddDialog = false }
+            )
+        }
+
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surface,
             bottomBar = {
                 BottomNavigationBar(
                     navigator = navigator,
-                    toggleLibrariesDrawer = { coroutineScope.launch { vm.toggleNavBar() } },
+                    onLibrariesClick = {
+                        // no library yet: ask for the folder with all the manga/comics
+                        if (libraries.isEmpty()) showLibraryAddDialog = true
+                        else navigator.replaceAll(librariesScreen(libraries))
+                    },
                     modifier = Modifier
                 )
             },
         ) { paddingValues ->
             val layoutDirection = LocalLayoutDirection.current
-
-            ModalNavigationDrawer(
-                drawerState = vm.navBarState,
-                drawerContent = {
-                    LibrariesNavBar(
-                        modifier = Modifier.padding(
-                            start = paddingValues.calculateStartPadding(layoutDirection),
-                            end = paddingValues.calculateEndPadding(layoutDirection),
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = paddingValues.calculateBottomPadding(),
-                        ).consumeWindowInsets(paddingValues),
-                        vm = vm,
-                        navigator = navigator
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = paddingValues.calculateStartPadding(layoutDirection),
+                        end = paddingValues.calculateEndPadding(layoutDirection),
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding(),
                     )
-                },
-                content = {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(
-                                start = paddingValues.calculateStartPadding(layoutDirection),
-                                end = paddingValues.calculateEndPadding(layoutDirection),
-                                top = paddingValues.calculateTopPadding(),
-                                bottom = paddingValues.calculateBottomPadding(),
-                            )
-                            .consumeWindowInsets(paddingValues)
-                    ) {
-                        CurrentScreen()
-                    }
-                }
-            )
+                    .consumeWindowInsets(paddingValues)
+            ) {
+                CurrentScreen()
+            }
         }
     }
 
     @Composable
     private fun BottomNavigationBar(
         navigator: Navigator,
-        toggleLibrariesDrawer: () -> Unit,
+        onLibrariesClick: () -> Unit,
         modifier: Modifier
     ) {
         Surface(
@@ -226,8 +225,8 @@ class MainScreen(
                     CompactNavButton(
                         text = stringResource(Res.string.navbar_libraries),
                         icon = Icons.Default.LocalLibrary,
-                        onClick = { toggleLibrariesDrawer() },
-                        isSelected = false,
+                        onClick = onLibrariesClick,
+                        isSelected = navigator.lastItem is LibraryScreen,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -306,7 +305,7 @@ class MainScreen(
                 if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
             },
             onLibrariesClick = {
-                navigator.replaceAll(LibraryScreen())
+                navigator.replaceAll(librariesScreen(vm.libraries.value))
                 if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
             },
 
@@ -319,27 +318,11 @@ class MainScreen(
         )
     }
 
-    @Composable
-    private fun LibrariesNavBar(
-        modifier: Modifier,
-        vm: MainScreenViewModel,
-        navigator: Navigator,
-    ) {
-        val coroutineScope = rememberCoroutineScope()
-        LibrariesNavBarContent(
-            modifier = modifier,
-            currentScreen = navigator.lastItem,
-            libraries = vm.libraries.collectAsState().value,
-            libraryActions = vm.getLibraryActions(),
-            onLibrariesClick = {
-                navigator.replaceAll(LibraryScreen())
-                coroutineScope.launch { vm.navBarState.snapTo(Closed) }
-            },
-
-            onLibraryClick = {
-                navigator.replaceAll(LibraryScreen(it))
-                coroutineScope.launch { vm.navBarState.snapTo(Closed) }
-            },
-        )
-    }
 }
+
+/**
+ * Screen opened by the "Libraries" button: with a single library (one folder with all the manga/comics)
+ * open it directly so its series and its actions menu (scan, edit...) are shown; otherwise show all libraries.
+ */
+private fun librariesScreen(libraries: List<KomgaLibrary>): LibraryScreen =
+    if (libraries.size == 1) LibraryScreen(libraries.first().id) else LibraryScreen()

@@ -14,17 +14,21 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.dialogs.tabs.TabDialog
 import snd.komga.client.library.KomgaLibrary
 
+/**
+ * @param foldersOnly edit only the names and folders of every library (General tab), without a selected library
+ */
 @Composable
 fun LibraryEditDialogs(
     library: KomgaLibrary?,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    foldersOnly: Boolean = false,
 ) {
     val viewModelFactory = LocalViewModelFactory.current
-    val vm = remember { viewModelFactory.getLibraryEditDialogViewModel(library, onDismissRequest) }
+    val vm = remember { viewModelFactory.getLibraryEditDialogViewModel(library, onDismissRequest, foldersOnly) }
     val coroutineScope = rememberCoroutineScope()
 
     val title =
-        if (library != null) stringResource(Res.string.library_edit_library)
+        if (library != null || foldersOnly) stringResource(Res.string.library_edit_library)
         else stringResource(Res.string.library_add)
 
     val libraryEditString = stringResource(Res.string.library_edit)
@@ -32,7 +36,7 @@ fun LibraryEditDialogs(
     val libraryNextString = stringResource(Res.string.library_edit_dialog_next)
     val confirmationText = remember(library, vm.currentTab) {
         when {
-            library != null -> libraryEditString
+            library != null || foldersOnly -> libraryEditString
             vm.currentTab is MetadataTab -> libraryAddString
             else -> libraryNextString
         }

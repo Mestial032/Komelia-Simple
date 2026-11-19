@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -33,8 +34,11 @@ import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.common.Page
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.sse.KomgaEvent
+
+private const val LIBRARY_RESOLVE_TIMEOUT_MS = 2000L
 
 class LibrarySeriesTabState(
     private val seriesApi: KomgaSeriesApi,
@@ -42,6 +46,8 @@ class LibrarySeriesTabState(
     private val notifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
     private val settingsRepository: CommonSettingsRepository,
+    // known from the start, unlike [library] which is resolved asynchronously
+    private val libraryId: KomgaLibraryId?,
     private val library: StateFlow<KomgaLibrary?>,
     private val taskEmitter: OfflineTaskEmitter?,
     val cardWidth: StateFlow<Dp>,
@@ -74,8 +80,15 @@ class LibrarySeriesTabState(
         if (state.value !is LoadState.Uninitialized) return
 
         screenModelScope.launch {
-            filterState.initialize()
-            if (filter != null) filterState.applyFilter(filter)
+            if (filter != null) {
+                // opened with a filter already applied (e.g. a genre): prepare the filter options first
+                initializeFilterOptions()
+                filterState.applyFilter(filter)
+            } else {
+                // the options (genres, tags, publishers...) are only needed when the filter menu is opened:
+                // load them in the background instead of delaying the series
+                launch { initializeFilterOptions() }
+            }
 
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
             loadSeriesPage(1)
@@ -104,6 +117,12 @@ class LibrarySeriesTabState(
         screenModelScope.launch {
             loadSeriesPage(1)
         }
+    }
+
+    private suspend fun initializeFilterOptions() {
+        // the filter options are requested for the library, wait until it's known
+        if (libraryId != null) withTimeoutOrNull(LIBRARY_RESOLVE_TIMEOUT_MS) { library.first { it != null } }
+        filterState.initialize()
     }
 
     fun seriesMenuActions() = SeriesMenuActions(seriesApi, notifications, taskEmitter, screenModelScope)
@@ -158,7 +177,7 @@ class LibrarySeriesTabState(
         filter: SeriesFilter
     ): Page<KomeliaSeries> {
         val condition = allOfSeries {
-            library.value?.let { library { isEqualTo(it.id) } }
+            libraryId?.let { library { isEqualTo(it) } }
             filter.addConditionTo(this)
         }
 

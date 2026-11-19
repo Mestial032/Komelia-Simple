@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.common
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -104,6 +106,8 @@ fun ReaderContent(
     Box(
         Modifier
             .fillMaxSize()
+            // pure black so OLED screens turn the pixels around the page completely off
+            .background(Color.Black)
             .onSizeChanged {
                 screenScaleState.setAreaSize(it)
             }

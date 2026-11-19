@@ -3,6 +3,8 @@ package snd.komelia.ui.series
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -188,20 +190,23 @@ class SeriesFilterState(
 
     suspend fun initialize() {
         appNotifications.runCatchingToNotifications {
-            genresOptions = referentialApi.getGenres(libraryIds = library.value?.id?.let { listOf(it) }.orEmpty())
-            tagOptions = referentialApi.getTags(libraryIds = library.value?.id?.let { listOf(it) }.orEmpty())
-            releaseDateOptions = referentialApi.getSeriesReleaseDates(
-                libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
-            )
-            ageRatingsOptions = referentialApi.getAgeRatings(
-                libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
-            )
-            publishersOptions = referentialApi.getPublishers(
-                libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
-            )
-            languagesOptions = referentialApi.getLanguages(
-                libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
-            )
+            val libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
+            // independent requests: run them in parallel instead of waiting for each one in turn
+            coroutineScope {
+                val genres = async { referentialApi.getGenres(libraryIds = libraryIds) }
+                val tags = async { referentialApi.getTags(libraryIds = libraryIds) }
+                val releaseDates = async { referentialApi.getSeriesReleaseDates(libraryIds = libraryIds) }
+                val ageRatings = async { referentialApi.getAgeRatings(libraryIds = libraryIds) }
+                val publishers = async { referentialApi.getPublishers(libraryIds = libraryIds) }
+                val languages = async { referentialApi.getLanguages(libraryIds = libraryIds) }
+
+                genresOptions = genres.await()
+                tagOptions = tags.await()
+                releaseDateOptions = releaseDates.await()
+                ageRatingsOptions = ageRatings.await()
+                publishersOptions = publishers.await()
+                languagesOptions = languages.await()
+            }
         }
     }
 

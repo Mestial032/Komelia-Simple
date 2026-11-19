@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +31,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_all_libraries
+import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_edit
+import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_scan_files
+import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_scan_files_deep
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_tab_collections
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_tab_readlists
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_tab_series
@@ -48,6 +53,7 @@ import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.common.menus.LibraryActionsMenu
 import snd.komelia.ui.common.menus.LibraryMenuActions
+import snd.komelia.ui.dialogs.libraryedit.LibraryEditDialogs
 import snd.komelia.ui.library.LibraryTab.COLLECTIONS
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
@@ -98,6 +104,7 @@ class LibraryScreen(
                                 library = vm.library.collectAsState().value,
                                 currentTab = vm.currentTab,
                                 libraryActions = vm.libraryActions(),
+                                onScanAllLibraries = vm::scanAllLibraries,
                                 collectionsCount = vm.collectionsCount,
                                 readListsCount = vm.readListsCount,
                                 onBrowseClick = vm::toBrowseTab,
@@ -240,6 +247,7 @@ fun LibraryToolBar(
     library: KomgaLibrary?,
     currentTab: LibraryTab,
     libraryActions: LibraryMenuActions,
+    onScanAllLibraries: (deep: Boolean) -> Unit,
     collectionsCount: Int,
     readListsCount: Int,
     onBrowseClick: () -> Unit,
@@ -275,8 +283,50 @@ fun LibraryToolBar(
                         onDismissRequest = { showOptionsMenu = false }
                     )
                 }
+            } else if (library == null && isAdmin && !isOffline) {
+                // "all libraries" view: actions that apply to every library at once
+                var showFoldersDialog by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showOptionsMenu = true }) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = { showOptionsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.library_scan_files)) },
+                            onClick = {
+                                showOptionsMenu = false
+                                onScanAllLibraries(false)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.library_scan_files_deep)) },
+                            onClick = {
+                                showOptionsMenu = false
+                                onScanAllLibraries(true)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.library_edit)) },
+                            onClick = {
+                                showOptionsMenu = false
+                                showFoldersDialog = true
+                            }
+                        )
+                    }
+                }
+                if (showFoldersDialog) {
+                    LibraryEditDialogs(
+                        library = null,
+                        foldersOnly = true,
+                        onDismissRequest = { showFoldersDialog = false }
+                    )
+                }
             }
-            Text(library?.let { library.name } ?: stringResource(Res.string.library_all_libraries))
+            // the library name is not shown as a title; only the "all libraries" view keeps its label
+            if (library == null) Text(stringResource(Res.string.library_all_libraries))
 
             Spacer(Modifier.width(5.dp))
         }

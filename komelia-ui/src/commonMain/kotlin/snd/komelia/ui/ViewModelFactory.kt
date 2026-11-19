@@ -130,6 +130,7 @@ class ViewModelFactory(
 
             appNotifications = dependencies.appNotifications,
             komgaEvents = dependencies.komgaEvents.events,
+            libraryId = libraryId,
             libraryFlow = getLibraryFlow(libraryId),
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies?.taskEmitter,
@@ -281,13 +282,18 @@ class ViewModelFactory(
         )
     }
 
-    fun getLibraryEditDialogViewModel(library: KomgaLibrary?, onDismissRequest: () -> Unit) =
-        LibraryEditDialogViewModel(
-            library = library,
-            onDialogDismiss = onDismissRequest,
-            libraryApi = komgaApi.libraryApi,
-            appNotifications = dependencies.appNotifications,
-        )
+    fun getLibraryEditDialogViewModel(
+        library: KomgaLibrary?,
+        onDismissRequest: () -> Unit,
+        foldersOnly: Boolean = false,
+    ) = LibraryEditDialogViewModel(
+        library = library,
+        onDialogDismiss = onDismissRequest,
+        libraryApi = komgaApi.libraryApi,
+        appNotifications = dependencies.appNotifications,
+        allLibraries = dependencies.komgaSharedState.libraries.value,
+        foldersOnly = foldersOnly,
+    )
 
     fun getSeriesEditDialogViewModel(series: KomeliaSeries, onDismissRequest: () -> Unit) =
         SeriesEditDialogViewModel(

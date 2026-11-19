@@ -6,9 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,11 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.edit_tab_general
+import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_edit_add_folder
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_edit_browse
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_edit_name
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.library_edit_root_folder
 import org.jetbrains.compose.resources.stringResource
-import snd.komelia.ui.StateHolder
 import snd.komelia.ui.dialogs.filebrowser.FileBrowserDialogContent
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
@@ -40,39 +46,81 @@ class GeneralTab(
     @Composable
     override fun Content() {
         GeneralTabContent(
-            name = StateHolder(vm.libraryName.value, vm::setLibraryName, vm.libraryNameError),
-            rootFolder = StateHolder(vm.rootFolder.value, vm::setRootFolder, vm.rootFolderError),
+            folders = vm.folders,
+            onNameChange = vm::setFolderName,
+            onRootFolderChange = vm::setRootFolder,
+            onFolderAdd = vm::addFolder,
+            onFolderRemove = vm::removeFolder,
         )
     }
 }
 
+// every folder (library) of the user, each with its name and root folder
 @Composable
 private fun GeneralTabContent(
-    name: StateHolder<String>,
-    rootFolder: StateHolder<String>,
+    folders: List<LibraryFolderState>,
+    onNameChange: (LibraryFolderState, String) -> Unit,
+    onRootFolderChange: (LibraryFolderState, String) -> Unit,
+    onFolderAdd: () -> Unit,
+    onFolderRemove: (LibraryFolderState) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        folders.forEachIndexed { index, folder ->
+            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 10.dp))
+            FolderEntry(
+                folder = folder,
+                // only folders that don't exist in Komga yet can be removed from here
+                canRemove = folder.library == null && index > 0,
+                onNameChange = { onNameChange(folder, it) },
+                onRootFolderChange = { onRootFolderChange(folder, it) },
+                onRemove = { onFolderRemove(folder) },
+            )
+        }
+
+        TextButton(onClick = onFolderAdd) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Text(stringResource(Res.string.library_edit_add_folder))
+        }
+    }
+}
+
+@Composable
+private fun FolderEntry(
+    folder: LibraryFolderState,
+    canRemove: Boolean,
+    onNameChange: (String) -> Unit,
+    onRootFolderChange: (String) -> Unit,
+    onRemove: () -> Unit,
 ) {
     var showFileBrowserDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        TextField(
-            value = name.value,
-            onValueChange = name.setValue,
-            label = { Text(stringResource(Res.string.library_edit_name)) },
-            isError = name.errorMessage != null,
-            supportingText = { name.errorMessage?.let { Text(it) } },
-            modifier = Modifier.fillMaxWidth()
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                value = folder.name,
+                onValueChange = onNameChange,
+                label = { Text(stringResource(Res.string.library_edit_name)) },
+                isError = folder.nameError != null,
+                supportingText = { folder.nameError?.let { Text(it) } },
+                modifier = Modifier.weight(1f)
+            )
+            if (canRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.Close, contentDescription = null)
+                }
+            }
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextField(
-                value = rootFolder.value,
-                onValueChange = rootFolder.setValue,
+                value = folder.rootFolder,
+                onValueChange = onRootFolderChange,
                 label = { Text(stringResource(Res.string.library_edit_root_folder)) },
-                isError = rootFolder.errorMessage != null,
-                supportingText = { rootFolder.errorMessage?.let { Text(it) } },
+                isError = folder.rootFolderError != null,
+                supportingText = { folder.rootFolderError?.let { Text(it) } },
                 modifier = Modifier.weight(7f)
             )
 
@@ -88,8 +136,7 @@ private fun GeneralTabContent(
     if (showFileBrowserDialog) {
         FileBrowserDialogContent(
             onDismissRequest = { showFileBrowserDialog = false },
-            onDirectoryChoice = rootFolder.setValue
+            onDirectoryChoice = onRootFolderChange
         )
     }
-
 }

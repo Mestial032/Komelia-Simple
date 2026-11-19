@@ -130,6 +130,7 @@
     <string name="library_edit_name">Name</string>
     <string name="library_edit_root_folder">Root folder</string>
     <string name="library_edit_browse">Browse</string>
+    <string name="library_edit_add_folder">Add folder</string>
     <string name="library_filebrowser_root">Library's root folder</string>
     <string name="library_filebrowser_parent">Parent</string>
     <string name="library_filebrowser_directory">Directory</string>

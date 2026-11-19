@@ -9,8 +9,11 @@ import io.github.reactivecircus.cache4k.Cache
 import io.github.reactivecircus.cache4k.CacheEvent.Evicted
 import io.github.reactivecircus.cache4k.CacheEvent.Expired
 import io.github.reactivecircus.cache4k.CacheEvent.Removed
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.ReaderImage.PageId
@@ -52,6 +56,12 @@ import snd.komga.client.common.KomgaReadingDirection
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+// how long a swipe waits for the page to change at all (nothing happens at the very end of the last book)
+private const val PAGE_CHANGE_TIMEOUT_MS = 300L
+
+// how long a swipe waits for the new page images before showing the loading placeholder
+private const val PAGE_LOAD_TIMEOUT_MS = 1500L
+
 class PagedReaderState(
     private val cleanupScope: CoroutineScope,
     private val settingsRepository: ImageReaderSettingsRepository,
@@ -63,6 +73,9 @@ class PagedReaderState(
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // load jobs of the current spread and its neighbors, by spread index
+    private val spreadLoadJobs = MutableStateFlow<Map<Int, Deferred<PagesLoadJob>>>(emptyMap())
 
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
         .maximumCacheSize(10)
@@ -280,6 +293,36 @@ class PagedReaderState(
         }
     }
 
+    /**
+     * Moves to the next page and suspends until it is ready to be displayed (used by the swipe gesture so the old
+     * page doesn't flash back on screen while the new one loads).
+     * @return false if the page didn't change (e.g. there is nothing after the current page)
+     */
+    suspend fun nextPageAndAwaitDisplay(): Boolean = changePageAndAwaitDisplay(::nextPage)
+
+    /** Same as [nextPageAndAwaitDisplay] for the previous page. */
+    suspend fun previousPageAndAwaitDisplay(): Boolean = changePageAndAwaitDisplay(::previousPage)
+
+    private suspend fun changePageAndAwaitDisplay(changePage: () -> Unit): Boolean {
+        val spreadBefore = currentSpread.value
+        val transitionBefore = transitionPage.value
+        changePage()
+
+        val displayed = combine(currentSpread, transitionPage) { spread, transition -> spread to transition }
+        val changed = withTimeoutOrNull(PAGE_CHANGE_TIMEOUT_MS) {
+            displayed.first { (spread, transition) -> spread !== spreadBefore || transition != transitionBefore }
+        } != null
+        if (!changed) return false
+
+        // a placeholder spread without images is published while the page is still loading; wait for the images
+        withTimeoutOrNull(PAGE_LOAD_TIMEOUT_MS) {
+            displayed.first { (spread, transition) ->
+                transition != null || (spread.pages.isNotEmpty() && spread.pages.all { it.imageResult != null })
+            }
+        }
+        return true
+    }
+
     fun onPageChange(page: Int) {
         if (currentSpreadIndex.value == page) return
         pageChangeFlow.tryEmit(Unit)
@@ -309,9 +352,12 @@ class PagedReaderState(
         val currentSpreadMetadata = pageSpreads.value[loadSpreadIndex]
         val currentSpreadJob = launchSpreadLoadJob(currentSpreadMetadata)
 
+        val loadJobs = mutableMapOf(loadSpreadIndex to currentSpreadJob)
         loadRange.filter { it != loadSpreadIndex }.forEach { spreadIndex ->
-            enqueueSpreadLoadJob(pageSpreads.value[spreadIndex])
+            loadJobs[spreadIndex] = launchSpreadLoadJob(pageSpreads.value[spreadIndex])
         }
+        // remembered so the neighbor pages can be shown next to the current one while swiping
+        spreadLoadJobs.value = loadJobs
 
         if (currentSpreadJob.isActive) {
             delay(10)
@@ -388,8 +434,21 @@ class PagedReaderState(
     }
 
     @Suppress("DeferredResultUnused")
-    private fun enqueueSpreadLoadJob(pagesMeta: List<PageMetadata>) {
-        launchSpreadLoadJob(pagesMeta)
+    /**
+     * Returns the preloaded spread [offset] spreads away from the current one (-1 previous, 1 next) together with
+     * its own screen scale, waiting for it to finish loading. Null if there is no such spread or it failed to load.
+     */
+    suspend fun awaitAdjacentSpread(offset: Int): PagesLoadJob? {
+        val spreadIndex = currentSpreadIndex.value + offset
+        val expectedPages = pageSpreads.value.getOrNull(spreadIndex) ?: return null
+        val job = spreadLoadJobs.value[spreadIndex] ?: return null
+        val loaded = try {
+            job.await()
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive() // only the load job was cancelled (page changed), not the caller
+            return null
+        }
+        return loaded.takeIf { result -> result.spread.pages.map { it.metadata } == expectedPages }
     }
 
     private fun getMaxPageSize(pages: List<PageMetadata>, containerSize: IntSize): IntSize {

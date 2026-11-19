@@ -17,7 +17,6 @@ import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.komga.api.model.KomeliaSeries
 import snd.komelia.ui.search.SearchResults
-import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
@@ -57,15 +56,12 @@ class SearchBarState(
                 series = emptyList()
                 books = emptyList()
             } else {
+                // the search bar dropdown only shows series; individual books are not listed
                 series = seriesApi.getSeriesList(
                     KomgaSeriesSearch(fullTextSearch = query),
                     pageRequest = KomgaPageRequest(size = 10)
                 ).content
-
-                books = bookApi.getBookList(
-                    KomgaBookSearch(fullTextSearch = query),
-                    KomgaPageRequest(size = 10)
-                ).content
+                books = emptyList()
             }
 
             isLoading = false

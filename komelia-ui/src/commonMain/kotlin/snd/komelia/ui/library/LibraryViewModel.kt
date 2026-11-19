@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaCollectionsApi
 import snd.komelia.komga.api.KomgaLibraryApi
@@ -40,6 +41,7 @@ import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.CollectionAdded
 import snd.komga.client.sse.KomgaEvent.CollectionDeleted
@@ -56,6 +58,8 @@ class LibraryViewModel(
 
     private val appNotifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
+    // known from the start, unlike [library] which is resolved asynchronously
+    private val libraryId: KomgaLibraryId?,
     libraryFlow: Flow<KomgaLibrary?>,
     settingsRepository: CommonSettingsRepository,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
@@ -78,6 +82,7 @@ class LibraryViewModel(
         notifications = appNotifications,
         komgaEvents = komgaEvents,
         settingsRepository = settingsRepository,
+        libraryId = libraryId,
         library = library,
         cardWidth = cardWidth,
         taskEmitter = taskEmitter,
@@ -132,7 +137,7 @@ class LibraryViewModel(
         appNotifications.runCatchingToNotifications {
             mutableState.value = Loading
             val pageRequest = KomgaPageRequest(size = 0)
-            val libraryIds = listOfNotNull(library.value?.id)
+            val libraryIds = listOfNotNull(libraryId)
             collectionsCount = collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
             readListsCount = readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
 
@@ -155,6 +160,18 @@ class LibraryViewModel(
     }
 
     fun libraryActions() = LibraryMenuActions(libraryApi, appNotifications, taskEmitter, screenModelScope)
+
+    // Komga only scans one library per request: launch the scan of every library with a single notification
+    fun scanAllLibraries(deep: Boolean) {
+        appNotifications.runCatchingToNotifications(screenModelScope) {
+            libraryApi.getLibraries().forEach { libraryApi.scan(it.id, deep) }
+            appNotifications.add(
+                AppNotification.Normal(
+                    if (deep) "Launched deep scan of all libraries" else "Launched scan of all libraries"
+                )
+            )
+        }
+    }
 
     fun stopKomgaEventHandler() {
         reloadEventsEnabled.value = false

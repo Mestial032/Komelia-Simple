@@ -149,12 +149,13 @@ fun ColumnScope.LibrariesNavBarContent(
 
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isOffline = LocalOfflineMode.current.collectAsState().value
+    // a single folder holds all the manga/comics: the add button is only offered while no library exists
     NavButton(
-        onClick = { onLibrariesClick() },
+        onClick = { if (libraries.isEmpty() && isAdmin && !isOffline) showLibraryAddDialog = true else onLibrariesClick() },
         icon = Icons.AutoMirrored.Filled.LibraryBooks,
         label = stringResource(Res.string.navbar_libraries),
-        isSelected = false,
-        actionButton = if (!isAdmin || isOffline) null else {
+        isSelected = libraries.size == 1 && currentScreen is LibraryScreen,
+        actionButton = if (!isAdmin || isOffline || libraries.isNotEmpty()) null else {
             {
                 IconButton(onClick = { showLibraryAddDialog = true }) {
                     Icon(
@@ -166,7 +167,8 @@ fun ColumnScope.LibrariesNavBarContent(
         }
     )
 
-    libraries.forEach { library ->
+    // with a single library the "Libraries" button already opens it, so it is not listed again
+    if (libraries.size > 1) libraries.forEach { library ->
         NavButton(
             onClick = { onLibraryClick(library.id) },
             icon = null,

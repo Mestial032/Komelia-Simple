@@ -1,6 +1,28 @@
-# Komelia - Komga media client
+# Komelia Simple - Komga media client
 
-### Downloads:
+> **This is a modified fork of [Komelia](https://github.com/Snd-R/Komelia) by Snd-R**, distributed under the same
+> Apache 2.0 license. All credit for the original app goes to its author.
+>
+> **Este es un fork modificado de [Komelia](https://github.com/Snd-R/Komelia)**, con la misma licencia Apache 2.0.
+
+### Changes in this fork / Cambios en este fork
+
+All changes are in `komelia-ui` (shared by desktop and Android):
+
+- **Home** only shows *Keep reading*: one book per series (the last one read), and tapping it resumes reading
+  at the page where you left off.
+- **Search bar** only lists series, not individual books.
+- **Image reader**
+    - Swipe left/right to change page in the paged reader, showing the next page while dragging.
+    - Pure black (`#000000`) background around the pages, so OLED screens turn those pixels off.
+- **Libraries**
+    - The *Libraries* button opens the series directly.
+    - *Edit → General* lists every library folder with its name, and new folders can be added there.
+    - The *All libraries* view can scan every library at once.
+    - New libraries empty the trash automatically after each scan.
+    - Faster loading: series are requested before the filter options, which load in parallel.
+
+### Original Komelia downloads:
 
 - Latest prebuilt release is available at https://github.com/Snd-R/Komelia/releases
 - Google Play Store https://play.google.com/store/apps/details?id=io.github.snd_r.komelia

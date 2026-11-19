@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -202,7 +203,7 @@ private fun VerticalLayout(
                 modifier = Modifier
                     .animateContentSize(spring(stiffness = Spring.StiffnessVeryLow))
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceDim)
+                    .background(Color.Black)
             ) {
                 ContinuousReaderImage(
                     state = state,
@@ -241,7 +242,7 @@ private fun HorizontalLayout(
                 Modifier
                     .animateContentSize(spring(stiffness = Spring.StiffnessVeryLow))
                     .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surfaceDim)
+                    .background(Color.Black)
             ) {
                 ContinuousReaderImage(
                     state = state,
