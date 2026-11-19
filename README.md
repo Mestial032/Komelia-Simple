@@ -5,6 +5,13 @@
 >
 > **Este es un fork modificado de [Komelia](https://github.com/Snd-R/Komelia)**, con la misma licencia Apache 2.0.
 
+### Download / Descarga
+
+- Android APK: https://github.com/Mestial032/Komelia-Simple/releases (arm64 phones)
+- If the official Komelia is installed, uninstall it first: both use the same app ID.  
+  Si tienes la Komelia oficial instalada, desinstálala antes: usan el mismo identificador.
+- A [Komga](https://komga.org) server is required.
+
 ### Changes in this fork / Cambios en este fork
 
 All changes are in `komelia-ui` (shared by desktop and Android):
@@ -30,13 +37,15 @@ All changes are in `komelia-ui` (shared by desktop and Android):
 - AUR package https://aur.archlinux.org/packages/komelia
 
 ## Translations
-You can help translate this project to your language by using service provided by [Weblate](https://hosted.weblate.org/engage/komelia/)
+Translations are managed by the original Komelia project. You can help translate Komelia to your language by using
+the service provided by [Weblate](https://hosted.weblate.org/engage/komelia/); texts added only in this fork are
+in English.
 
 [![Translation status](https://hosted.weblate.org/widget/komelia/horizontal-auto.svg)](https://hosted.weblate.org/engage/komelia/)
 
 ## Build instructions
 Make sure you download all git submodules\
-`git clone --recurse-submodules https://github.com/Snd-R/Komelia` \
+`git clone --recurse-submodules https://github.com/Mestial032/Komelia-Simple` \
 if you already cloned repository without recurse command run\
 `git submodule update --init --recursive`
 
@@ -50,8 +59,8 @@ If you want to build with system toolchain and dependencies try running:\
 Replace <*platform*> placeholder with your target platform. \
 Available platforms include: `linux-x86_64`, `windows-x86_64`
 
-- `docker build -t komelia-build-<platfrom> . -f ./cmake/<paltform>.Dockerfile `
-- `docker run -v .:/build komelia-build-<paltform>`
+- `docker build -t komelia-build-<platform> . -f ./cmake/<platform>.Dockerfile `
+- `docker run -v .:/build komelia-build-<platform>`
 - `./gradlew <platform>_copyJniLibs`
 - `./gradlew buildEpubReaders`
 
