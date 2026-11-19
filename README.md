@@ -29,37 +29,6 @@ All changes are in `komelia-ui` (shared by desktop and Android):
 - F-Droid https://f-droid.org/packages/io.github.snd_r.komelia/
 - AUR package https://aur.archlinux.org/packages/komelia
 
-## Screenshots
-
-<details>
-  <summary>Mobile</summary>
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Komelia" width="270">  
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Komelia" width="270">  
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" alt="Komelia" width="270">  
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" alt="Komelia" width="270">  
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" alt="Komelia" width="270">  
-   <img src="/fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" alt="Komelia" width="270">  
-</details>
-
-<details>
-  <summary>Tablet</summary>
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/1.jpg" alt="Komelia" width="400" height="640">  
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/2.jpg" alt="Komelia" width="400" height="640">  
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/3.jpg" alt="Komelia" width="400" height="640">  
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/4.jpg" alt="Komelia" width="400" height="640">  
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/5.jpg" alt="Komelia" width="400" height="640">  
-   <img src="/fastlane/metadata/android/en-US/images/tenInchScreenshots/6.jpg" alt="Komelia" width="400" height="640">  
-</details>
-
-<details>
-  <summary>Desktop</summary>
-   <img src="/screenshots/1.jpg" alt="Komelia" width="1280">  
-   <img src="/screenshots/2.jpg" alt="Komelia" width="1280">  
-   <img src="/screenshots/3.jpg" alt="Komelia" width="1280">  
-   <img src="/screenshots/4.jpg" alt="Komelia" width="1280">  
-   <img src="/screenshots/5.jpg" alt="Komelia" width="1280">  
-</details>
-
 ## Translations
 You can help translate this project to your language by using service provided by [Weblate](https://hosted.weblate.org/engage/komelia/)
 
